@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UGC — Ticket Cropper</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #001E62;
+    --navy-dark: #001245;
+    --cyan: #00AEEF;
+    --cyan-dark: #0090c8;
+    --white: #ffffff;
+    --bg: #f2f4f8;
+    --border: #d8dde8;
+    --text: #1a1a2e;
+    --muted: #6b7a99;
+    --red: #d32f2f;
+    --green: #2e7d32;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ── Header ── */
+  .ugc-header {
+    background: var(--navy);
+    padding: 0 1.25rem;
+    display: flex;
+    align-items: center;
+    height: 56px;
+    border-bottom: 3px solid var(--cyan);
+    gap: 0.75rem;
+  }
+  .ugc-header svg { flex-shrink: 0; }
+  .header-divider {
+    width: 1px; height: 28px;
+    background: rgba(255,255,255,0.2);
+  }
+  .header-title {
+    font-size: 0.75rem; font-weight: 700;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 0.15em; text-transform: uppercase;
+  }
+
+  .page-bar {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 0.85rem 1.25rem;
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+  .page-bar h1 {
+    font-size: 1rem; font-weight: 800;
+    color: var(--navy); text-transform: uppercase;
+  }
+  .badge {
+    background: var(--cyan); color: var(--white);
+    font-size: 0.6rem; font-weight: 800; padding: 2px 7px; border-radius: 2px;
+  }
+
+  /* ── Drop zone ── */
+  #drop-zone {
+    background: var(--white); border-bottom: 1px solid var(--border);
+    padding: 2.25rem 1.25rem; text-align: center; cursor: pointer;
+  }
+  #file-input { display: none; }
+  .upload-icon {
+    width: 48px; height: 48px; background: var(--navy);
+    border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.85rem;
+  }
+  .upload-icon svg { width: 22px; height: 22px; fill: none; stroke: var(--white); stroke-width: 2; }
+  .upload-label strong { display: block; font-size: 1rem; color: var(--navy); }
+  .upload-label span { font-size: 0.82rem; color: var(--muted); }
+  .btn-upload {
+    margin-top: 1.1rem; padding: 0.6rem 1.75rem; background: var(--navy);
+    color: var(--white); font-weight: 700; border: none; border-radius: 3px; cursor: pointer;
+  }
+
+  /* ── Result (Taille réduite) ── */
+  #result-section {
+    display: none; background: var(--white);
+    border-top: 1px solid var(--border); padding: 1.5rem 1.25rem;
+  }
+  .result-header {
+    display: flex; justify-content: space-between; margin-bottom: 1rem;
+    max-width: 320px; margin-left: auto; margin-right: auto;
+  }
+  .result-label { font-size: 0.72rem; font-weight: 800; color: var(--navy); text-transform: uppercase; }
+  .result-meta { font-size: 0.72rem; color: var(--muted); }
+
+  .checker-wrap {
+    background-image:
+      linear-gradient(45deg, #d8dde8 25%, transparent 25%),
+      linear-gradient(-45deg, #d8dde8 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #d8dde8 75%),
+      linear-gradient(-45deg, transparent 75%, #d8dde8 75%);
+    background-size: 12px 12px; background-color: #edf0f5;
+    border: 1px solid var(--border); border-radius: 3px;
+    max-width: 280px; /* Aperçu beaucoup plus petit */
+    margin: 0 auto; line-height: 0;
+  }
+  #result-canvas { width: 100%; height: auto; display: block; }
+
+  .actions { display: flex; gap: 0.6rem; margin-top: 1.2rem; justify-content: center; }
+  .btn-action {
+    padding: 0.65rem 1rem; font-size: 0.75rem; font-weight: 700;
+    text-transform: uppercase; cursor: pointer; border-radius: 3px;
+  }
+  .btn-primary { background: var(--cyan); color: var(--white); border: none; }
+  .btn-secondary { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+
+  #progress-wrap { display: none; height: 3px; background: var(--border); }
+  #progress-bar { height: 100%; background: var(--cyan); width: 0%; }
+  #status { padding: 0.5rem 1.25rem; font-size: 0.78rem; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+
+<header class="ugc-header">
+  <svg width="52" height="32" viewBox="0 0 120 72" fill="none">
+    <text x="4" y="52" font-family="Arial Black" font-weight="900" font-size="52" fill="white">UGC</text>
+    <path d="M10 62 Q60 78 110 62" stroke="#00AEEF" stroke-width="4" fill="none"/>
+  </svg>
+  <div class="header-divider"></div>
+  <span class="header-title">Ticket Extractor</span>
+</header>
+
+<div class="page-bar">
+  <h1>Extraction Ticket</h1>
+  <span class="badge">Auto-Crop</span>
+</div>
+
+<main>
+  <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <input type="file" id="file-input" accept="image/*">
+    <div class="upload-icon">
+      <svg viewBox="0 0 24 24" stroke="currentColor"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+    </div>
+    <div class="upload-label">
+      <strong>Glissez votre capture ici</strong>
+      <span>Le ticket sera isolé et détouré automatiquement</span>
+    </div>
+    <button class="btn-upload">Choisir un fichier</button>
+  </div>
+
+  <div id="progress-wrap"><div id="progress-bar"></div></div>
+  <div id="status"></div>
+
+  <div id="result-section">
+    <div class="result-header">
+      <span class="result-label">Aperçu transparent</span>
+      <span class="result-meta" id="crop-meta"></span>
+    </div>
+    <div class="checker-wrap">
+      <canvas id="result-canvas"></canvas>
+    </div>
+    <div class="actions">
+      <button class="btn-action btn-primary" id="btn-download">↓ Télécharger PNG</button>
+      <button class="btn-action btn-secondary" onclick="location.reload()">✕ Nouveau</button>
+    </div>
+  </div>
+</main>
+
+<script>
+const TOLERANCE = 40;
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const resultCanvas = document.getElementById('result-canvas');
+const status = document.getElementById('status');
+
+fileInput.onchange = e => { if(e.target.files[0]) loadFile(e.target.files[0]); };
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => process(img);
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function colorDist(r1,g1,b1,r2,g2,b2) {
+  return Math.sqrt((r1-r2)**2 + (g1-g2)**2 + (b1-b2)**2);
+}
+
+function process(img) {
+  document.getElementById('progress-wrap').style.display = 'block';
+  document.getElementById('progress-bar').style.width = '50%';
+
+  const W=img.naturalWidth, H=img.naturalHeight;
+  const canvas=document.createElement('canvas');
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.drawImage(img,0,0);
+
+  const imageData=ctx.getImageData(0,0,W,H);
+  const data=imageData.data;
+
+  // 1. Détection fond (coin haut gauche)
+  const bgR=data[0], bgG=data[1], bgB=data[2];
+
+  // 2. Masquage alpha
+  for(let i=0; i<W*H; i++) {
+    const d = colorDist(data[i*4], data[i*4+1], data[i*4+2], bgR, bgG, bgB);
+    data[i*4+3] = d < TOLERANCE ? 0 : 255;
+  }
+  ctx.putImageData(imageData, 0, 0);
+
+  // 3. LOGIQUE DE CROP (Ignorer le logo UGC en haut)
+  const rowDensity = new Float32Array(H);
+  for(let y=0; y<H; y++) {
+    let count=0;
+    for(let x=0; x<W; x++) { if(data[(y*W+x)*4+3] > 50) count++; }
+    rowDensity[y] = count/W;
+  }
+
+  // On cherche la zone dense (le ticket) en ignorant les petits éléments du haut
+  let ticketTop = 0;
+  for(let y=0; y<H; y++) {
+    let denseArea = 0;
+    for(let k=y; k<Math.min(H, y+20); k++) { if(rowDensity[k] > 0.3) denseArea++; }
+    if(denseArea > 15) { ticketTop = y; break; }
+  }
+
+  // 4. Calcul des bordures finales
+  let minX=W, maxX=0, minY=H, maxY=0;
+  for(let y=ticketTop; y<H; y++) {
+    for(let x=0; x<W; x++) {
+      if(data[(y*W+x)*4+3] > 50) {
+        if(x<minX) minX=x; if(x>maxX) maxX=x;
+        if(y<minY) minY=y; if(y>maxY) maxY=y;
+      }
+    }
+  }
+
+  // Ajustement pour ne pas coller aux bords
+  minX = Math.max(0, minX + 2);
+  minY = Math.max(0, minY + 2);
+  maxX = Math.min(W, maxX - 2);
+
+  const cW = maxX - minX, cH = maxY - minY;
+  resultCanvas.width = cW; resultCanvas.height = cH;
+  resultCanvas.getContext('2d').drawImage(canvas, minX, minY, cW, cH, 0, 0, cW, cH);
+
+  document.getElementById('crop-meta').textContent = cW + ' × ' + cH + ' px';
+  document.getElementById('result-section').style.display = 'block';
+  document.getElementById('progress-bar').style.width = '100%';
+  status.textContent = "✓ Ticket extrait avec succès";
+
+  document.getElementById('btn-download').onclick = () => {
+    const a = document.createElement('a');
+    a.download = 'ticket_ugc_transparent.png';
+    a.href = resultCanvas.toDataURL();
+    a.click();
+  };
+}
+</script>
+</body>
+</html>
