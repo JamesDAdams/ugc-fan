@@ -87,9 +87,9 @@ function process(img) {
     }
 
     // Marges de sécurité
-    minX = Math.max(0, minX + 2);
     minY = Math.max(0, minY + 2);
-    maxX = Math.min(W, maxX - 2);
+    minX = Math.max(0, minX - 5); // Donne 10px de marge à gauche
+    maxX = Math.min(W, maxX + 5); // Donne 10px de marge à droite
     
     const cW = maxX - minX;
     const cH = maxY - minY;

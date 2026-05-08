@@ -230,3 +230,7 @@ body {
     color: var(--muted); 
     text-align: center; 
 }
+
+#file-input {
+    display: none;
+}
